@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>All Job – Inline UDF editing (prototype)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --nav:#1d2537; --cyan:#1fbdee; --cyan-d:#1aa7dc; --cyan-l:#bde3f3; --mag:#d01c7e;
+  --red:#f0443a; --line:#e3e3e3; --stripe:#f7f7f7; --flash:#e2f6fd; --ink:#222;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#eef0f3;font-family:'Inter','Segoe UI',sans-serif;color:var(--ink);font-size:13px}
+button,input{font:inherit}
+a{color:var(--cyan-d)}
+
+/* top bar */
+.top{background:var(--nav);color:#fff;min-height:52px;display:flex;flex-wrap:wrap;align-items:center;gap:22px;padding:0 16px 0 2px}
+.brand{display:flex;align-items:center;gap:8px}
+.logo{width:42px;height:26px;background:#fff;border-radius:3px;display:flex;align-items:center;justify-content:center}
+.logo span{width:36px;height:20px;background:#c8102e;border-radius:10px;color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.vsep{width:1px;height:22px;background:#4a5470;margin-left:14px}
+.nav{display:flex;flex-wrap:wrap;gap:24px;font-size:14px;align-self:stretch}
+.nav a{color:#fff;text-decoration:none;display:flex;align-items:center;gap:6px;border-bottom:2px solid transparent}
+.nav a.on{border-bottom-color:#29b6dd}
+.more{position:relative;display:flex;align-items:stretch}
+.more-btn{display:flex;align-items:center;gap:6px;border:0;background:none;color:#fff;font-size:14px;padding:0;cursor:pointer}
+.more-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.more-menu{position:absolute;top:100%;left:-12px;min-width:200px;background:#fff;border-radius:3px;box-shadow:0 8px 22px rgba(0,0,0,.2);padding:4px 0;z-index:50}
+.nav .more-menu a{color:#222;border:0;padding:9px 14px;font-size:13px}
+.nav .more-menu a:hover,.nav .more-menu a:focus-visible{background:#eef8fc;outline:none}
+.right{margin-left:auto;display:flex;align-items:center;gap:18px;font-size:14px}
+.copilot{display:flex;align-items:center;gap:8px;height:32px;padding:0 6px 0 14px;border-radius:16px;border:1px solid #8f9ee8;background:#262f47;color:#fff;cursor:pointer;font-weight:500}
+.beta{font-size:11px;background:#c9d2ff;color:#2b3a8f;border-radius:10px;padding:2px 8px;font-weight:600}
+.ico{display:flex;align-items:center;gap:5px}
+
+/* sub header */
+.sub{background:#fff;min-height:42px;display:flex;align-items:center;gap:8px;padding:0 14px;box-shadow:0 1px 4px rgba(0,0,0,.12);position:relative;z-index:2}
+.sub b{font-weight:600}
+.mbtn{display:flex;align-items:center;justify-content:center;gap:14px;height:30px;padding:0 14px;border:0;border-radius:3px;background:var(--mag);color:#fff;cursor:pointer}
+.obtn{width:28px;height:30px;border:1px solid var(--mag);border-radius:3px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+main{padding:0 16px}
+.tabs{display:flex;flex-wrap:wrap;gap:70px;padding:14px 0 8px 42px}
+.tabs button{border:0;background:none;padding:0;color:#8c8c8c;cursor:pointer}
+.tabs button.on{color:var(--cyan-d);font-weight:500}
+.tabs button:hover{color:var(--cyan-d)}
+.tools{display:flex;align-items:center;gap:18px;padding:4px 0 6px 2px}
+.filt{width:26px;height:26px;border-radius:50%;border:1px solid #8c8c8c;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.search{width:386px;max-width:60vw;height:22px;border:1px solid #b8b8b8;border-radius:4px;padding:0 9px;outline:none}
+.seg{margin-left:auto;display:flex;border:1px solid #c9c9c9;border-radius:14px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;padding:4px 12px;cursor:pointer;color:#555;font-size:12px}
+.seg button.on{background:var(--nav);color:#fff;font-weight:600}
+.seg button.on.cur{background:#b45309}
+
+/* grid */
+.gwrap{background:#fff;overflow:auto;max-height:calc(100vh - 250px);min-height:300px;border-radius:3px 3px 0 0}
+.tr{display:grid;min-height:31px}
+.th{background:var(--cyan);color:#fff;font-weight:600;font-size:12.5px;position:sticky;top:0;z-index:3}
+.th > div{display:flex;align-items:center;gap:6px;padding:0 18px;border-right:1px solid #7fd7f5;min-width:0}
+.th > div span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr{background:var(--cyan-l);position:sticky;top:31px;z-index:3}
+.fr > div{display:flex;align-items:center;padding:0 14px;border-right:1px solid #d6eef8;min-height:30px}
+.mag{width:20px;height:20px;border-radius:50%;background:#fff;border:1px solid #c9c9c9;display:flex;align-items:center;justify-content:center}
+.row{border-bottom:1px solid var(--line)}
+.row.alt{background:var(--stripe)}
+.row:not(.alt){background:#fff}
+.row.red{color:var(--red)}
+.cb{display:flex;align-items:center;justify-content:center;border-right:1px solid #ececec}
+.td{position:relative;display:flex;align-items:center;min-width:0;border-right:1px solid #ececec;min-height:31px}
+.td .txt{padding:0 18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td.ed{background:#fff}
+.td.flash{background:var(--flash)}
+.ec{display:flex;align-items:center;gap:6px;width:100%;height:31px;padding:0 12px 0 18px;border:0;background:transparent;color:inherit;cursor:text;text-align:left}
+.ec .v{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ec:hover{box-shadow:inset 0 0 0 1px var(--cyan)}
+.ec:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--cyan)}
+.ec.on{box-shadow:inset 0 0 0 2px var(--cyan)}
+.ec .pen{opacity:0}
+.ec:hover .pen,.ec:focus-visible .pen{opacity:1}
+.ec.sel{cursor:pointer}
+label.ec{cursor:pointer;padding:0 18px;gap:8px}
+label.ec input{width:15px;height:15px;margin:0;accent-color:var(--cyan-d);cursor:pointer}
+.cin{width:100%;height:31px;padding:0 16px;border:0;outline:none;background:#fff;color:var(--ink);box-shadow:inset 0 0 0 2px var(--cyan)}
+.cin.bad{box-shadow:inset 0 0 0 2px #b3261e}
+.err{position:absolute;left:0;top:31px;z-index:6;background:#b3261e;color:#fff;font-size:11.5px;padding:3px 8px;border-radius:0 0 3px 3px;white-space:nowrap}
+.st{display:flex;align-items:center;justify-content:space-between;width:100%;height:31px;padding:0 14px 0 18px;border:0;cursor:pointer;text-align:left}
+.st:hover{filter:brightness(.96)}
+.st.on{box-shadow:inset 0 0 0 2px var(--nav)}
+.lk{display:flex;align-items:center;height:31px;padding:0 18px;color:inherit;text-decoration:none;min-width:0;width:100%}
+.lk span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lk:hover span{text-decoration:underline}
+.kb{position:sticky;right:0;display:flex;align-items:center;justify-content:center;border-left:1px solid #ececec;background:inherit;z-index:1}
+.th .kb,.fr .kb{padding:0;border-right:0;z-index:4}
+.setbtn{width:26px;height:26px;border:1px solid var(--mag);border-radius:3px;background:#fff;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+.dots{width:24px;height:28px;border:0;background:none;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+.colbtn{border:0;background:none;padding:0;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex:none}
+.colbtn:hover,.colbtn:focus-visible{background:rgba(255,255,255,.3);outline:none}
+.donebtn{flex:none;border:0;background:#fff;color:#0d86b3;font-weight:600;font-size:11.5px;border-radius:10px;padding:2px 9px 2px 6px;cursor:pointer;display:flex;align-items:center;gap:4px}
+.td.colmode{background:#eaf7fd;padding:0 6px}
+.cf{width:100%;height:25px;padding:0 8px;border:1px solid #9fd6ea;border-radius:3px;background:#fff;color:var(--ink);outline:none}
+.cf:focus{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan)}
+.cf.bad{border-color:#b3261e;box-shadow:0 0 0 1px #b3261e}
+.cf.saved{background:var(--flash)}
+.ec.field{height:25px;border:1px solid #9fd6ea;border-radius:3px;background:#fff;padding:0 8px}
+.td.colmode .err{top:28px}
+.empty{padding:28px;text-align:center;color:#666}
+.total{display:flex;justify-content:flex-end;padding:10px 24px 6px;color:var(--cyan-d);font-weight:600;font-size:12.5px}
+.bar{height:3px;background:var(--cyan)}
+
+/* menu */
+.backdrop{position:fixed;inset:0;background:transparent;border:0;z-index:20}
+.menu{position:fixed;background:#fff;border:1px solid #c9c9c9;border-radius:3px;box-shadow:0 8px 22px rgba(0,0,0,.16);padding:3px 0;z-index:21;display:flex;flex-direction:column}
+.menu button{display:flex;align-items:center;gap:8px;min-height:30px;padding:0 12px;border:0;text-align:left;cursor:pointer;background:#fff;color:var(--ink)}
+.menu button:hover,.menu button:focus-visible{background:#eef8fc;outline:none}
+.menu button.cur{background:var(--flash);font-weight:600}
+.sw{width:12px;height:12px;border-radius:2px;border:1px solid rgba(0,0,0,.12)}
+
+/* drawer */
+.dim{position:fixed;inset:0;background:rgba(29,37,55,.35);border:0;z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:440px;max-width:100%;background:#fff;z-index:41;box-shadow:-6px 0 24px rgba(0,0,0,.18);display:flex;flex-direction:column}
+.dh{background:var(--cyan);color:#fff;min-height:46px;display:flex;align-items:center;padding:0 8px 0 18px;font-weight:600;font-size:14px}
+.dh button{margin-left:auto;width:36px;height:36px;border:0;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.dg{display:grid;grid-template-columns:26px 30px minmax(0,1fr) 128px;align-items:center;padding:0 18px}
+.dcols{min-height:34px;background:var(--cyan-l);font-size:12px;font-weight:600;color:var(--nav)}
+.dlist{flex:1;overflow-y:auto}
+.drow{min-height:40px;border-bottom:1px solid #ececec}
+.drow input{width:16px;height:16px;margin:0;accent-color:var(--cyan-d);cursor:pointer}
+.dname{display:flex;align-items:center;gap:6px;min-width:0}
+.dname span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dname.off span:first-child{color:#8c8c8c}
+.udf{font-size:10px;font-weight:700;color:#a3125f;border:1px solid #e7a3c8;border-radius:3px;padding:0 4px}
+.sw2{min-height:40px;padding:0;border:0;background:none;cursor:pointer;display:flex;align-items:center;gap:8px}
+.sw2:disabled{opacity:.5;cursor:not-allowed}
+.track{width:34px;height:18px;border-radius:9px;background:#bdbdbd;position:relative;display:block;transition:background .15s}
+.knob{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+.sw2[aria-pressed="true"] .track{background:var(--cyan-d)}
+.sw2[aria-pressed="true"] .knob{left:18px}
+.swl{font-size:12px;color:#555}
+.fixed{font-size:12px;color:#6b6b6b}
+.df{border-top:1px solid var(--line);padding:12px 18px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.df .sum{font-size:12px;color:#555}
+.df .acts{margin-left:auto;display:flex;gap:6px}
+.btn-o{height:30px;padding:0 16px;border:1px solid var(--mag);border-radius:3px;background:#fff;color:var(--mag);cursor:pointer}
+.btn-p{height:30px;padding:0 20px;border:0;border-radius:3px;background:var(--mag);color:#fff;cursor:pointer}
+.btn-p:disabled{opacity:.45;cursor:not-allowed}
+
+/* toast */
+.toast{position:fixed;right:24px;bottom:28px;z-index:30;background:var(--nav);color:#fff;border-radius:4px;padding:10px 12px 10px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:480px}
+.toast .t{font-weight:600}
+.toast .s{font-size:12px;color:#c9d1e0}
+.toast button{margin-left:4px;min-height:32px;padding:0 10px;border:0;border-radius:3px;background:none;color:var(--cyan);font-weight:700;cursor:pointer}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.gearbtn{border:0;background:none;padding:0;cursor:pointer;display:flex;align-items:center}
+
+/* ===== Settings › Customized Modules ===== */
+[hidden]{display:none !important}
+.crumb{background:#fff;min-height:42px;display:flex;align-items:center;gap:12px;padding:0 14px;box-shadow:0 1px 4px rgba(0,0,0,.12);position:relative;z-index:2;font-size:13.5px}
+.crumb .c1{font-weight:500;color:#222}
+.crumb .c2{color:var(--mag);font-weight:500}
+.set-wrap{display:flex;gap:11px;padding:12px 12px 12px 12px;height:calc(100vh - 94px);min-height:560px}
+.side{width:233px;flex:none;background:#20263a;border-radius:4px;color:#d3d6df;display:flex;flex-direction:column;padding-top:12px;transition:width .15s;overflow:hidden}
+.side-h{display:flex;align-items:center;justify-content:space-between;padding:0 14px 0 30px;min-height:26px;font-size:13px;color:#c9ccd6}
+.side-h button{border:0;background:none;color:#e6e8ef;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0}
+.side ul{list-style:none;margin:10px 0 0;padding:0}
+.side li{position:relative}
+.side a{display:flex;align-items:center;gap:12px;min-height:40px;margin-left:16px;margin-right:5px;padding:0 0 0 9px;color:#d3d6df;text-decoration:none;font-size:13px;white-space:nowrap}
+.side a:hover{background:#262d44}
+.side li.on a{background:#191d2c;color:#fff;font-weight:600}
+.side li.on::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cyan)}
+.side a svg{flex:none}
+.side.collapsed{width:60px}
+.side.collapsed .side-h{padding:0;justify-content:center}
+.side.collapsed .side-h span,.side.collapsed a span{display:none}
+.side.collapsed a{margin-left:12px;padding-left:9px}
+.set-main{flex:1;min-width:0;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(0,0,0,.12);border-radius:3px;overflow:hidden}
+.set-card{flex:1;background:#fff;overflow:auto;border-radius:3px 3px 0 0}
+.lg{display:grid;grid-template-columns:48px 250px 250px 248px minmax(200px,1fr);align-items:center;min-width:996px}
+.lg-h{background:var(--cyan);color:#fff;font-weight:600;font-size:13.5px;min-height:31px}
+.lg-f{background:var(--cyan-l);min-height:30px}
+.lg-r{min-height:30px;border-bottom:1px solid #e3e3e3;background:#fff;font-size:13px}
+.lg-r:hover{background:#efefef}
+.lg .cbx{display:flex;justify-content:center}
+.lg input[type=checkbox]{width:15px;height:15px;margin:0;cursor:pointer}
+.lg-h input[type=checkbox]{width:16px;height:16px}
+.lg .smag{margin-left:-4px}
+.lsel{width:170px;height:19px;font-size:12.5px;border:1px solid #a9a9a9;border-radius:2px;color:#222;padding:0 22px 0 9px;cursor:pointer;-webkit-appearance:none;appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M0 0h12L6 8z' fill='%23bdbdbd'/%3E%3C/svg%3E") no-repeat right 4px center}
+.lname{border:0;background:none;padding:0;color:#222;cursor:pointer;text-align:left}
+.lname:hover{color:var(--cyan-d);text-decoration:underline}
+.pill{position:relative;width:48px;height:20px;border-radius:10px;border:1px solid #9a9a9a;background:#fff;padding:0;cursor:pointer;font-size:9.5px;font-weight:600;display:block}
+.pill .k{position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;border:1px solid #777;background:#fff;box-sizing:border-box}
+.pill .l{position:absolute;left:19px;top:50%;transform:translateY(-50%);color:#777;line-height:1}
+.pill.on{background:var(--cyan);border-color:var(--cyan)}
+.pill.on .k{left:auto;right:4px;border-color:#fff}
+.pill.on .l{left:9px;color:#fff}
+.pill.w{width:68px}
+.pill.w .l{left:20px}
+.pill.w.on .l{left:8px}
+.set-foot{background:#e4e6ea;min-height:37px;display:flex;align-items:center;justify-content:flex-end;padding:0 2px}
+.nl{display:flex;align-items:center;gap:10px;height:30px;padding:0 14px 0 18px;border:0;border-radius:3px;background:var(--mag);color:#fff;cursor:pointer;font-weight:500}
+.lg-empty{padding:24px;color:#666;text-align:center}
+.crumb .c1btn{border:0;background:none;padding:0;font-weight:500;color:#222;cursor:pointer;font-size:13.5px}
+.crumb .c1btn:hover{color:var(--cyan-d);text-decoration:underline}
+
+/* ===== Settings home ===== */
+.sh-page{height:calc(100vh - 94px);overflow-y:auto}
+.sh-grid{display:grid;grid-template-columns:repeat(auto-fill,284px);gap:20px 32px;justify-content:center;max-width:1232px;margin:10px auto 0;padding:0 0 30px}
+.sh-card{background:#fff;height:277px;box-shadow:0 1px 4px rgba(0,0,0,.18);border-radius:2px;overflow:hidden}
+.sh-h{display:flex;align-items:center;gap:10px;height:30px;padding:0 20px;border-bottom:1px solid #d9d9d9;color:#1aa7dc;font-weight:600;font-size:13.5px}
+.sh-h svg{flex:none}
+.sh-list{list-style:none;margin:0;padding:3px 0 0 22px}
+.sh-list button{border:0;background:none;padding:0;font-size:13px;line-height:24px;color:#7a7a7a;cursor:pointer;text-align:left}
+.sh-list button:hover,.sh-list button:focus-visible{color:var(--cyan-d);text-decoration:underline;outline:none}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <span class="logo"><span>LOGO</span></span>
+    <span style="font-size:14px;font-weight:500">REQ</span>
+    <span class="vsep"></span>
+  </div>
+  <nav class="nav" aria-label="Main">
+    <a href="#">Dashboard</a>
+    <a href="#" class="on" aria-current="page" id="navAllJob" data-act="goJobs">All Job</a>
+    <a href="#">Tasks</a>
+    <a href="#">Calendar</a>
+    <a href="#">Production management</a>
+    <div class="more" id="more">
+      <button class="more-btn" data-act="more" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu">More <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3h8L5 8z" fill="#fff"/></svg></button>
+      <div class="more-menu" id="moreMenu" role="menu" hidden>
+        <a href="#" role="menuitem">Purchase orders</a>
+      </div>
+    </div>
+  </nav>
+  <div class="right">
+    <button class="copilot"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9d2ff" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg>Ask BM Copilot <span class="beta">Beta</span></button>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" role="img" aria-label="Add"><path d="M12 4v16M4 12h16"/></svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" role="img" aria-label="Notifications"><path d="M12 22a2.5 2.5 0 0 0 2.4-2h-4.8A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5-6.7V3.5a2 2 0 0 0-4 0v.8A7 7 0 0 0 5 11v5l-2 2v1h18v-1z"/></svg>
+    <button class="gearbtn" data-act="goSettings" aria-label="Settings" title="Settings"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M18.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L14 3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L5.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1L10 21h4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button>
+    <span class="ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.6v.6M12 17.5h0"/></svg>Help &amp; Support</span>
+    <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0 14a8 8 0 0 1-6.2-3c.9-1.8 3.4-2.9 6.2-2.9s5.3 1.1 6.2 2.9A8 8 0 0 1 12 20z"/></svg>Hemanth <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+  </div>
+</header>
+
+<div class="sub" id="jobsSub">
+  <b>All Job</b>
+  <div style="margin-left:auto;display:flex;gap:6px">
+    <button class="mbtn" style="min-width:140px">Default View <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3h8L5 8z" fill="#fff"/></svg></button>
+    <button class="mbtn">Reports <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3h8L5 8z" fill="#fff"/></svg></button>
+    <button class="obtn" aria-label="More actions"><svg width="16" height="4" viewBox="0 0 16 4" aria-hidden="true"><circle cx="2" cy="2" r="1.8" fill="#d01c7e"/><circle cx="8" cy="2" r="1.8" fill="#d01c7e"/><circle cx="14" cy="2" r="1.8" fill="#d01c7e"/></svg></button>
+  </div>
+</div>
+
+<main id="jobsMain">
+  <div class="tabs" role="tablist">
+    <button class="on" role="tab" aria-selected="true">Default View</button>
+    <button role="tab">Work In Progress</button>
+    <button role="tab">Default Invoice View</button>
+    <button role="tab">Accounts View</button>
+    <button role="tab">Products View</button>
+    <button role="tab">Backorder View</button>
+  </div>
+  <div class="tools">
+    <button class="filt" aria-label="Filter"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z" fill="#d01c7e"/></svg></button>
+    <label class="sr" for="q">Search for</label>
+    <input id="q" class="search" type="search" placeholder="Search for" autocomplete="off">
+  </div>
+  <div class="gwrap" id="gwrap"><div id="grid"></div></div>
+  <div class="total" id="total"></div>
+  <div class="bar"></div>
+</main>
+
+<!-- ===== Settings home ===== -->
+<div id="settingsHome" hidden>
+  <div class="crumb"><span class="c1">Settings</span></div>
+  <div class="sh-page"><div class="sh-grid" id="shGrid"></div></div>
+</div>
+
+<!-- ===== Settings › Customized Modules ===== -->
+<div id="settingsScreen" hidden>
+  <div class="crumb">
+    <button class="c1btn" data-act="goSettings">Settings</button>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 6 6 6-6 6M13 6l6 6-6 6"/></svg>
+    <span class="c2">Customized Modules</span>
+  </div>
+  <div class="set-wrap">
+    <nav class="side" id="side" aria-label="Customized modules menu">
+      <div class="side-h"><span>Menu</span><button data-act="sideToggle" aria-label="Collapse menu" aria-expanded="true" id="sideBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="sideIco" d="m11 6-6 6 6 6M19 6l-6 6 6 6"/></svg></button></div>
+      <ul id="sideList">
+        <li class="on"><a href="#" data-act="sideItem" data-v="Job Section" aria-current="page" title="Job Section"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M3 12h18"/><rect x="10.5" y="11" width="3" height="3" rx=".5"/></svg><span>Job Section</span></a></li>
+        <li><a href="#" data-act="sideItem" data-v="Accounts" title="Accounts"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9ccd6" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18.5c1.2-2 3.2-3 5.5-3s4.3 1 5.5 3"/></svg><span>Accounts</span></a></li>
+        <li><a href="#" data-act="sideItem" data-v="Leads/Customers" title="Leads/Customers"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9ccd6" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.3 3.2-5.5 6.5-5.5s5.9 2.2 6.5 5.5"/><path d="M15 4.8a3.5 3.5 0 0 1 0 6.4M17.5 14.8c2 .8 3.4 2.6 3.9 5.2"/></svg><span>Leads/Customers</span></a></li>
+        <li><a href="#" data-act="sideItem" data-v="Supplier" title="Supplier"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9ccd6" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M3 20V11l5 3v-3l5 3v-3l5 3V5h3v15z"/><path d="M7 17h2M12 17h2M17 17h2"/></svg><span>Supplier</span></a></li>
+        <li><a href="#" data-act="sideItem" data-v="Tasks" title="Tasks"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9ccd6" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4.5" cy="6" r="1" fill="#c9ccd6"/><circle cx="4.5" cy="12" r="1" fill="#c9ccd6"/><circle cx="4.5" cy="18" r="1" fill="#c9ccd6"/></svg><span>Tasks</span></a></li>
+        <li><a href="#" data-act="sideItem" data-v="Purchase Order" title="Purchase Order"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9ccd6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h3l2.4 11h11.2L21 7H6.2"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg><span>Purchase Order</span></a></li>
+      </ul>
+    </nav>
+    <section class="set-main" aria-label="Layouts">
+      <div class="set-card">
+        <div class="lg lg-h">
+          <div class="cbx"><input type="checkbox" id="lgAll" data-act="lgAll" aria-label="Select all layouts"></div>
+          <div>Layout Name</div><div>Shared To</div><div>Default</div><div>Status</div>
+        </div>
+        <div class="lg lg-f">
+          <div></div>
+          <div style="position:relative"><label class="sr" for="fName">Search layout name</label><span class="mag smag" style="position:absolute;left:0;top:50%;transform:translateY(-50%);pointer-events:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8c8c8c" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><input id="fName" data-lgf="name" type="search" style="width:170px;height:20px;border:0;background:transparent;padding:0 0 0 24px;outline:none;font-size:12.5px"></div>
+          <div style="position:relative"><label class="sr" for="fShared">Search shared to</label><span class="mag smag" style="position:absolute;left:0;top:50%;transform:translateY(-50%);pointer-events:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8c8c8c" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><input id="fShared" data-lgf="shared" type="search" style="width:170px;height:20px;border:0;background:transparent;padding:0 0 0 24px;outline:none;font-size:12.5px"></div>
+          <div><label class="sr" for="fDef">Filter default</label><select class="lsel" id="fDef" data-lgf="def"><option value="">Select</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+          <div><label class="sr" for="fStat">Filter status</label><select class="lsel" id="fStat" data-lgf="stat"><option value="">Select</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+        </div>
+        <div id="lgRows"></div>
+      </div>
+      <div class="set-foot"><button class="nl" data-act="newLayout"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>New Layout</button></div>
+    </section>
+  </div>
+</div>
+
+<div id="layer"></div>
+<div id="toastHost" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------------- Data ---------------- */
+  var OPT_STATUS = ['Agent Quote', 'Agent Order', 'Order', 'Backorder', 'Rework', 'Completed', 'Invoiced'];
+  var OPT_INSTALL = ['Not started', 'Phase 1 booked', 'Phase 1 fitted', 'Phase 2 booked', 'Phase 2 fitted', 'Complete'];
+  var OPT_FABRIC = ['Not ordered', 'Phase 1 ordered', 'Phase 1 received', 'Phase 2 ordered', 'Phase 2 received', 'All received'];
+  var MAX_TEXT = 60;
+
+  var STATUS = {
+    'Rework': { bg: '#ff6262', fg: '#ffffff' },
+    'Completed': { bg: '#5aa864', fg: '#111111' },
+    'Invoiced': { bg: '#5ccb6c', fg: '#111111' },
+    'Agent Quote': { bg: '#ececec', fg: '#222222' },
+    'Order': { bg: '#ffaeea', fg: '#111111' },
+    'Agent Order': { bg: '#6db7f2', fg: '#111111' },
+    'Backorder': { bg: '#ececec', fg: '#222222' }
+  };
+
+  // can = field type supports inline edit; builtin = already inline-editable today
+  var FIELDS = [
+    { key: 'org', label: 'Organisation Name', w: 200, type: 'plain', show: true },
+    { key: 'accRef', label: 'Account Ref', w: 150, type: 'plain', show: true },
+    { key: 'status', label: 'Job Status', w: 200, type: 'status', can: true, builtin: true, show: true, edit: true, options: OPT_STATUS },
+    { key: 'phInstall', label: 'Phased Install Tracking', w: 210, type: 'select', udf: true, can: true, show: true, edit: true, options: OPT_INSTALL },
+    { key: 'phFabric', label: 'Phased Fabric Tracking', w: 210, type: 'select', udf: true, can: true, show: true, edit: true, options: OPT_FABRIC },
+    { key: 'custRef', label: 'Customer Reference', w: 180, type: 'text', can: true, show: true, edit: true },
+    { key: 'addRef', label: 'Additional Reference', w: 180, type: 'text', can: true, show: true, edit: true },
+    { key: 'statusNotes', label: 'Status Notes', w: 220, type: 'text', can: true, show: true, edit: true },
+    { key: 'installDate', label: 'Install Date Confirmed', w: 190, type: 'date', udf: true, can: true, show: true, edit: true },
+    { key: 'depositChased', label: 'Deposit Chased', w: 150, type: 'check', udf: true, can: true, show: true, edit: true },
+    { key: 'siteContact', label: 'Site Contact', w: 170, type: 'text', udf: true, can: true, show: true, edit: false },
+    { key: 'accType', label: 'Account Type', w: 150, type: 'plain', show: true },
+    { key: 'invoice', label: 'Invoice No', w: 130, type: 'plain', show: true },
+    { key: 'email', label: 'Email', w: 250, type: 'plain', show: true },
+    { key: 'accessNotes', label: 'Access Notes', w: 190, type: 'text', udf: true, can: true, show: false, edit: false }
+  ];
+  var FMAP = {};
+  FIELDS.forEach(function (f) { FMAP[f.key] = f; });
+
+  function R(org, accRef, status, accType, invoice, email, red, custRef, addRef, statusNotes, phInstall, phFabric, installDate, deposit, site) {
+    return { org: org, accRef: accRef, status: status, accType: accType, invoice: invoice, email: email, red: red, custRef: custRef, addRef: addRef, statusNotes: statusNotes, phInstall: phInstall, phFabric: phFabric, installDate: installDate, depositChased: deposit, siteContact: site, accessNotes: '' };
+  }
+  var NB = 'Nice Blinds', SB = 'Special Blinds(2023)', E1 = 'klausmiikaelson@gmail.com', E2 = 'juztdesign007@gmail.com';
+  var ROWS = [
+    R(NB, 'MKLA0001', 'Rework', 'Domestic', '', E1, false, 'NB-2291', 'Lounge & kitchen', 'Remake 2 rollers', 'Phase 1 fitted', 'Phase 2 ordered', '2026-10-21', true, 'Site office'),
+    R(NB, 'MKLA0001', 'Rework', 'Domestic', '', E1, false, 'NB-2304', '', 'Wrong colour headrail', 'Phase 1 booked', 'Phase 1 received', '', false, 'Customer'),
+    R(SB, '667', 'Completed', 'Domestic', 'INV501', '', false, 'SB-667', 'Bedrooms', 'Signed off', 'Complete', 'All received', '2026-10-09', true, 'Customer'),
+    R(NB, 'MKLA0001', 'Invoiced', 'Domestic', '', E1, false, 'NB-2310', '', '', 'Complete', 'All received', '2026-10-02', true, 'Customer'),
+    R(NB, 'SURY0001', 'Agent Quote', 'Domestic', '', E2, true, '', '', 'Awaiting survey', 'Not started', 'Not ordered', '', false, 'Agent'),
+    R(SB, '660', 'Invoiced', 'Domestic', 'INV503', '', true, 'SB-660', '', '', 'Complete', 'All received', '2026-09-30', true, 'Site manager'),
+    R(SB, '657', 'Completed', 'Domestic', 'INV498', '', false, 'SB-657A', 'Phase 1', '', 'Phase 1 fitted', 'Phase 2 ordered', '2026-10-24', true, 'Site manager'),
+    R(SB, '657', 'Order', 'Domestic', '', '', true, 'SB-657B', 'Phase 2', 'Fabric due Thu', 'Not started', 'Phase 2 ordered', '', false, 'Site manager'),
+    R(SB, '657', 'Agent Order', 'Domestic', '', '', true, 'SB-657C', 'Phase 3', '', 'Not started', 'Not ordered', '', false, 'Site manager'),
+    R(SB, '657', 'Backorder', 'Domestic', '', '', true, 'SB-657D', 'Phase 2', 'Blackout fabric on back order', 'Phase 1 fitted', 'Phase 1 received', '', false, 'Site manager'),
+    R(SB, 'PREE0001', 'Order', 'ECommerce', '', '', false, 'WEB-88412', '', '', 'Not started', 'Phase 1 ordered', '', false, 'Customer'),
+    R(SB, 'PREE0001', 'Invoiced', 'ECommerce', 'INV502', '', true, 'WEB-88390', '', '', 'Complete', 'All received', '2026-09-26', true, 'Customer'),
+    R(SB, '656', 'Agent Quote', 'Domestic', '', '', true, '', '', '', 'Not started', 'Not ordered', '', false, 'Agent'),
+    R(SB, '655', 'Completed', 'Domestic', 'INV499', '', false, 'SB-655', 'Office', 'Signed off', 'Complete', 'All received', '2026-10-06', true, 'Reception'),
+    R(NB, 'SURY0001', 'Agent Quote', 'Domestic', '', E2, true, '', '', '', 'Not started', 'Not ordered', '', false, 'Agent')
+  ];
+
+  /* ---------------- State ---------------- */
+  function initialCfg() { var c = {}; FIELDS.forEach(function (f) { c[f.key] = { show: f.show, edit: !!f.edit }; }); return c; }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  var S = {
+    rows: clone(ROWS), cfg: initialCfg(), draftCfg: null, drawer: false,
+    editing: null, draft: '', flash: '', toast: null, q: '', mode: 'proposed', colEdit: null
+  };
+  var toastTimer = null, rendering = false;
+
+  /* ---------------- Helpers ---------------- */
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fmt(f, v) {
+    if (f.type === 'date') { if (!v) return ''; var p = String(v).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : String(v); }
+    if (f.type === 'check') return v ? 'Yes' : 'No';
+    return v ? String(v) : '';
+  }
+  function before() { return S.mode === 'before'; }
+  function editable(f) {
+    if (!f.can || !S.cfg[f.key].show || !S.cfg[f.key].edit) return false;
+    if (before() && f.udf) return false;
+    return true;
+  }
+  function visFields() { return FIELDS.filter(function (f) { return S.cfg[f.key].show; }); }
+  function visRows() {
+    var q = S.q.trim().toLowerCase(), out = [];
+    S.rows.forEach(function (r, i) {
+      if (!q || [r.org, r.accRef, r.custRef, r.addRef, r.invoice, r.email].join(' ').toLowerCase().indexOf(q) >= 0) out.push(i);
+    });
+    return out;
+  }
+  function editKeys() { return FIELDS.filter(function (f) { return editable(f) && f.type !== 'check'; }).map(function (f) { return f.key; }); }
+  var ICON = {
+    caret: function (c) { return '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3h8L5 8z" fill="' + c + '"/></svg>'; },
+    pen: '<svg class="pen" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1aa7dc" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>',
+    penW: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Editable"><title>Editable inline</title><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>',
+    penH: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>',
+    tick: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#0d86b3" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>',
+    cal: '<svg class="pen" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1aa7dc" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
+    mag: '<span class="mag"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8c8c8c" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>',
+    sliders: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d01c7e" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="1.8" fill="#fff"/><circle cx="15" cy="12" r="1.8" fill="#fff"/><circle cx="8" cy="17" r="1.8" fill="#fff"/></svg>',
+    dots: '<svg width="4" height="14" viewBox="0 0 4 14" aria-hidden="true"><circle cx="2" cy="2" r="1.6" fill="#1aa7dc"/><circle cx="2" cy="7" r="1.6" fill="#1aa7dc"/><circle cx="2" cy="12" r="1.6" fill="#1aa7dc"/></svg>',
+    grip: '<svg width="12" height="16" viewBox="0 0 12 16" aria-hidden="true"><g fill="#a8a8a8"><circle cx="3" cy="3" r="1.4"/><circle cx="9" cy="3" r="1.4"/><circle cx="3" cy="8" r="1.4"/><circle cx="9" cy="8" r="1.4"/><circle cx="3" cy="13" r="1.4"/><circle cx="9" cy="13" r="1.4"/></g></svg>',
+    check: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1fbdee" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>',
+    x: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>'
+  };
+
+  /* ---------------- Render: grid ---------------- */
+  function cellHtml(f, r, ri) {
+    var v = r[f.key], shown = fmt(f, v), ed = S.editing;
+    var isEd = !!(ed && ed.ri === ri && ed.key === f.key);
+    var id = ' data-ri="' + ri + '" data-key="' + f.key + '"';
+    var flash = S.flash === ri + ':' + f.key ? ' flash' : '';
+
+    if (f.type === 'status') {
+      var st = STATUS[v] || { bg: '#ececec', fg: '#222' };
+      var fg = r.red && v !== 'Rework' ? '#f0443a' : st.fg;
+      return '<div class="td"><button class="st' + (isEd ? ' on' : '') + '" data-act="edit"' + id + ' aria-haspopup="listbox" aria-label="Job Status, ' + esc(v) + '" style="background:' + st.bg + ';color:' + fg + '"><span>' + esc(v) + '</span>' + ICON.caret(fg === '#ffffff' ? '#fff' : (r.red ? '#f0443a' : '#111')) + '</button></div>';
+    }
+    if (before() && f.udf && f.can && S.cfg[f.key].edit) {
+      return '<div class="td ed"><a href="#" class="lk" data-act="link"' + id + '><span>' + esc(shown) + '</span></a></div>';
+    }
+    if (!editable(f)) return '<div class="td"><div class="txt">' + esc(shown) + '</div></div>';
+
+    if (S.colEdit === f.key) {
+      var rowLbl = esc(f.label) + ' for ' + esc(r.org) + ' ' + esc(r.accRef);
+      if (f.type === 'text' || f.type === 'date') {
+        return '<div class="td colmode"><input class="cf" data-colin="1" type="' + f.type + '" value="' + esc(v || '') + '"' + id + ' aria-label="' + rowLbl + '"><span class="err" role="alert" hidden></span></div>';
+      }
+      if (f.type === 'select') {
+        return '<div class="td colmode"><button class="ec sel field' + (isEd ? ' on' : '') + '" data-act="edit"' + id + ' aria-haspopup="listbox" aria-label="' + rowLbl + (shown ? ', currently ' + esc(shown) : ', empty') + '"><span class="v">' + esc(shown) + '</span>' + ICON.caret('#444') + '</button></div>';
+      }
+    }
+
+    if (f.type === 'check') {
+      return '<div class="td ed' + flash + '"><label class="ec"><input type="checkbox" data-act="check"' + id + (v ? ' checked' : '') + ' aria-label="' + esc(f.label) + '"><span>' + shown + '</span></label></div>';
+    }
+    if (isEd && f.type === 'text') {
+      var bad = String(S.draft).length > MAX_TEXT;
+      return '<div class="td ed"><input id="cellInput" class="cin' + (bad ? ' bad' : '') + '" type="text" value="' + esc(S.draft) + '" aria-label="' + esc(f.label) + '"' + id + '>' +
+        '<span class="err" id="cellErr" role="alert"' + (bad ? '' : ' hidden') + '>Max ' + MAX_TEXT + ' characters (' + String(S.draft).length + ')</span></div>';
+    }
+    if (isEd && f.type === 'date') {
+      return '<div class="td ed"><input id="cellInput" class="cin" type="date" value="' + esc(S.draft) + '" aria-label="' + esc(f.label) + '"' + id + ' style="padding:0 12px"></div>';
+    }
+    var icon = f.type === 'select' ? ICON.caret('#444') : f.type === 'date' ? ICON.cal : ICON.pen;
+    return '<div class="td ed' + flash + '"><button class="ec' + (f.type === 'select' ? ' sel' : '') + (isEd ? ' on' : '') + '" data-act="edit"' + id +
+      (f.type === 'select' ? ' aria-haspopup="listbox"' : '') +
+      ' aria-label="Edit ' + esc(f.label) + (shown ? ', currently ' + esc(shown) : ', empty') + '"><span class="v">' + esc(shown) + '</span>' + icon + '</button></div>';
+  }
+
+  function renderGrid() {
+    var fs = visFields();
+    var widths = [50].concat(fs.map(function (f) { return f.w; })).concat([40]);
+    var cols = widths.map(function (w) { return w + 'px'; }).join(' ');
+    var minW = widths.reduce(function (a, b) { return a + b; }, 0);
+    var g = 'style="grid-template-columns:' + cols + '"';
+    var h = '<div style="min-width:' + minW + 'px">';
+
+    h += '<div class="tr th" ' + g + '><div style="justify-content:center;padding:0"><input type="checkbox" aria-label="Select all jobs" style="width:16px;height:16px;margin:0"></div>';
+    fs.forEach(function (f) {
+      h += '<div><span>' + esc(f.label) + '</span></div>';
+    });
+    h += '<div class="kb" style="background:#1fbdee"><button class="setbtn" data-act="drawer" aria-label="Column settings" title="Column settings">' + ICON.sliders + '</button></div></div>';
+
+    h += '<div class="tr fr" ' + g + '><div></div>';
+    fs.forEach(function () { h += '<div>' + ICON.mag + '</div>'; });
+    h += '<div class="kb" style="background:#bde3f3"></div></div>';
+
+    var vr = visRows();
+    vr.forEach(function (ri, n) {
+      var r = S.rows[ri];
+      h += '<div class="tr row' + (n % 2 ? ' alt' : '') + (r.red ? ' red' : '') + '" ' + g + '>';
+      h += '<div class="cb"><input type="checkbox" aria-label="Select job" style="width:15px;height:15px;margin:0"></div>';
+      fs.forEach(function (f) { h += cellHtml(f, r, ri); });
+      h += '<div class="kb"><button class="dots" aria-label="Row actions">' + ICON.dots + '</button></div></div>';
+    });
+    if (!vr.length) h += '<div class="empty">No jobs match “' + esc(S.q) + '”.</div>';
+    h += '</div>';
+
+    document.getElementById('grid').innerHTML = h;
+    document.getElementById('total').textContent = 'Total Record: ' + vr.length;
+  }
+
+  /* ---------------- Render: layer (menu + drawer) ---------------- */
+  function renderLayer() {
+    var h = '', ed = S.editing;
+    if (ed && !S.drawer) {
+      var f = FMAP[ed.key];
+      if (f.type === 'select' || f.type === 'status') {
+        var cell = document.querySelector('[data-act="edit"][data-ri="' + ed.ri + '"][data-key="' + ed.key + '"]');
+        var rc = cell ? cell.getBoundingClientRect() : { left: 300, top: 200, bottom: 231, width: 200 };
+        var cur = S.rows[ed.ri][ed.key];
+        var mh = f.options.length * 30 + 8;
+        var top = rc.bottom + 2 + mh > window.innerHeight ? Math.max(8, rc.top - mh - 2) : rc.bottom + 2;
+        h += '<button class="backdrop" data-act="cancel" aria-label="Close list" tabindex="-1"></button>';
+        h += '<div class="menu" role="listbox" aria-label="' + esc(f.label) + '" style="top:' + Math.round(top) + 'px;left:' + Math.round(rc.left) + 'px;width:' + Math.round(rc.width) + 'px">';
+        f.options.forEach(function (o) {
+          h += '<button role="option" data-act="pick" data-v="' + esc(o) + '" aria-selected="' + (o === cur) + '"' + (o === cur ? ' class="cur"' : '') + '>' +
+            (f.type === 'status' ? '<span class="sw" style="background:' + STATUS[o].bg + '"></span>' : '') + esc(o) + '</button>';
+        });
+        h += '</div>';
+      }
+    }
+    if (S.drawer) {
+      var d = S.draftCfg;
+      h += '<button class="dim" data-act="closeDrawer" aria-label="Close column settings" tabindex="-1"></button>';
+      h += '<aside class="drawer" role="dialog" aria-modal="true" aria-label="Column settings">';
+      h += '<div class="dh">Column settings – Default View<button data-act="closeDrawer" aria-label="Close">' + ICON.x + '</button></div>';
+      h += '<div class="dg dcols"><span></span><span>Show</span><span>Column</span><span>Edit in All Job</span></div><div class="dlist">';
+      FIELDS.forEach(function (f) {
+        var c = d[f.key];
+        h += '<div class="dg drow">' + ICON.grip +
+          '<input type="checkbox" data-act="dshow" data-key="' + f.key + '"' + (c.show ? ' checked' : '') + ' aria-label="Show ' + esc(f.label) + '">' +
+          '<div class="dname' + (c.show ? '' : ' off') + '"><span>' + esc(f.label) + '</span>' + (f.udf ? '<span class="udf">UDF</span>' : '') + '</div><div>';
+        if (f.builtin) h += '<span class="fixed">Always (existing)</span>';
+        else if (!f.can) h += '<span class="fixed">Not editable</span>';
+        else {
+          var on = c.show && c.edit;
+          h += '<button class="sw2" data-act="dedit" data-key="' + f.key + '" aria-pressed="' + on + '"' + (c.show ? '' : ' disabled') + ' aria-label="Allow editing ' + esc(f.label) + ' in All Job">' +
+            '<span class="track"><span class="knob"></span></span><span class="swl">' + (!c.show ? 'Hidden' : (c.edit ? 'Editable' : 'Read only')) + '</span></button>';
+        }
+        h += '</div></div>';
+      });
+      var dirty = JSON.stringify(d) !== JSON.stringify(S.cfg);
+      var udfEd = FIELDS.filter(function (f) { return f.udf && d[f.key].show && d[f.key].edit; }).length;
+      var udfAll = FIELDS.filter(function (f) { return f.udf; }).length;
+      h += '</div><div class="df"><span class="sum">' + udfEd + ' of ' + udfAll + ' UDFs editable</span><div class="acts">' +
+        '<button class="btn-o" data-act="closeDrawer">Cancel</button><button class="btn-p" data-act="saveDrawer"' + (dirty ? '' : ' disabled') + '>Save</button></div></div></aside>';
+    }
+    document.getElementById('layer').innerHTML = h;
+    var curOpt = document.querySelector('.menu button.cur') || document.querySelector('.menu button');
+    if (curOpt) curOpt.focus();
+  }
+
+  function renderToast() {
+    var t = S.toast, host = document.getElementById('toastHost');
+    if (!t) { host.innerHTML = ''; return; }
+    var title, sub, undo = false;
+    if (t.kind === 'save') {
+      var f = FMAP[t.key], r = S.rows[t.ri];
+      title = f.label + ' updated';
+      sub = r.org + ' · ' + r.accRef + ': ' + (fmt(f, t.prev) || 'blank') + ' → ' + (fmt(f, t.next) || 'blank');
+      undo = true;
+    } else { title = t.title; sub = t.sub; }
+    host.innerHTML = '<div class="toast" role="status">' + ICON.check + '<div><div class="t">' + esc(title) + '</div><div class="s">' + esc(sub) + '</div></div>' +
+      (undo ? '<button data-act="undo">Undo</button>' : '') + '</div>';
+  }
+
+  function render() {
+    rendering = true;
+    var wrap = document.getElementById('gwrap'), sx = wrap.scrollLeft, sy = wrap.scrollTop;
+    renderGrid();
+    wrap.scrollLeft = sx; wrap.scrollTop = sy;
+    renderLayer();
+    renderToast();
+    document.querySelectorAll('.seg button').forEach(function (b) {
+      var on = b.getAttribute('data-v') === S.mode;
+      b.classList.toggle('on', on);
+      b.classList.toggle('cur', on && S.mode === 'before');
+    });
+    var inp = document.getElementById('cellInput');
+    if (inp) { inp.focus(); if (inp.type === 'text') { var l = inp.value.length; inp.setSelectionRange(l, l); } }
+    rendering = false;
+  }
+
+  /* ---------------- Actions ---------------- */
+  function showToast(t) {
+    S.toast = t;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { S.toast = null; renderToast(); }, 5000);
+  }
+  function setVal(ri, key, next) {
+    var prev = S.rows[ri][key];
+    S.rows[ri][key] = next;
+    S.flash = ri + ':' + key;
+    showToast({ kind: 'save', ri: ri, key: key, prev: prev, next: next });
+  }
+  function firstColField(key) {
+    return document.querySelector('.cf[data-key="' + key + '"], .ec.field[data-key="' + key + '"]');
+  }
+  function enterCol(key) {
+    if (S.editing && !commitDraft()) return;
+    S.editing = null; S.draft = '';
+    S.colEdit = key;
+    render();
+    var el = firstColField(key);
+    if (el) el.focus();
+  }
+  function exitCol() {
+    var key = S.colEdit;
+    S.colEdit = null;
+    render();
+    var b = document.querySelector('.colbtn[data-key="' + key + '"]');
+    if (b) b.focus();
+  }
+  function colCommit(el) {
+    var ri = +el.getAttribute('data-ri'), key = el.getAttribute('data-key'), f = FMAP[key];
+    var saved = S.rows[ri][key] == null ? '' : S.rows[ri][key];
+    var val = f.type === 'text' ? el.value.trim() : el.value;
+    if (f.type === 'text' && val.length > MAX_TEXT) {
+      el.value = saved; el.classList.remove('bad');
+      var er = el.parentNode.querySelector('.err'); if (er) er.hidden = true;
+      showToast({ kind: 'info', title: 'Not saved', sub: f.label + ' must be ' + MAX_TEXT + ' characters or fewer' });
+      renderToast();
+      return;
+    }
+    if (val === saved) return;
+    setVal(ri, key, val);
+    el.classList.add('saved');
+    renderToast();
+  }
+  function colStep(el, dir) {
+    var list = Array.prototype.slice.call(document.querySelectorAll('.cf[data-key="' + el.getAttribute('data-key') + '"]'));
+    var next = list[list.indexOf(el) + dir];
+    if (next) { next.focus(); next.scrollIntoView({ block: 'nearest' }); if (next.type === 'text') next.select(); }
+    else el.blur();
+  }
+
+  function start(ri, key) {
+    if (S.colEdit && S.colEdit !== key) S.colEdit = null;
+    S.editing = { ri: ri, key: key };
+    S.draft = S.rows[ri][key] == null ? '' : S.rows[ri][key];
+    S.flash = '';
+    render();
+  }
+  function cancel() { S.editing = null; S.draft = ''; render(); }
+  function validDraft() {
+    var f = FMAP[S.editing.key];
+    return !(f.type === 'text' && String(S.draft).length > MAX_TEXT);
+  }
+  function commitDraft() {
+    if (!S.editing) return true;
+    var ed = S.editing, f = FMAP[ed.key];
+    if (f.type === 'select' || f.type === 'status') return true;
+    if (!validDraft()) return false;
+    var val = f.type === 'text' ? String(S.draft).trim() : S.draft;
+    if (val !== S.rows[ed.ri][ed.key]) setVal(ed.ri, ed.key, val);
+    return true;
+  }
+  function commit() {
+    if (!S.editing) return;
+    if (!commitDraft()) return;
+    S.editing = null; S.draft = '';
+    render();
+  }
+  function move(dir) {
+    if (!S.editing) return;
+    if (!commitDraft()) return;
+    var keys = editKeys(), vr = visRows();
+    var ci = keys.indexOf(S.editing.key) + dir, vi = vr.indexOf(S.editing.ri);
+    if (ci >= keys.length) { ci = 0; vi++; }
+    if (ci < 0) { ci = keys.length - 1; vi--; }
+    if (vi < 0 || vi >= vr.length || !keys.length) { S.editing = null; S.draft = ''; render(); return; }
+    var nri = vr[vi], nk = keys[ci];
+    S.editing = { ri: nri, key: nk };
+    S.draft = S.rows[nri][nk] == null ? '' : S.rows[nri][nk];
+    rendering = true;
+    renderGrid();
+    rendering = false;
+    var target = document.querySelector('[data-ri="' + nri + '"][data-key="' + nk + '"]');
+    if (target) target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    render();
+  }
+  function undo() {
+    var t = S.toast;
+    if (!t || t.kind !== 'save') return;
+    S.rows[t.ri][t.key] = t.prev;
+    S.flash = t.ri + ':' + t.key;
+    showToast({ kind: 'info', title: 'Change undone', sub: FMAP[t.key].label + ' restored' });
+    render();
+  }
+
+  /* ---------------- Settings › Customized Modules ---------------- */
+  var LAYOUTS = [
+    { name: 'Job default', shared: '', def: true, active: true, sel: false },
+    { name: 'Commercial Jobs', shared: '', def: false, active: true, sel: false },
+    { name: 'new', shared: '', def: false, active: true, sel: false }
+  ];
+  var LF = { name: '', shared: '', def: '', stat: '' };
+
+  function lgVisible() {
+    var out = [];
+    LAYOUTS.forEach(function (l, i) {
+      if (LF.name && l.name.toLowerCase().indexOf(LF.name.toLowerCase()) < 0) return;
+      if (LF.shared && l.shared.toLowerCase().indexOf(LF.shared.toLowerCase()) < 0) return;
+      if (LF.def && (LF.def === 'yes') !== l.def) return;
+      if (LF.stat && (LF.stat === 'active') !== l.active) return;
+      out.push(i);
+    });
+    return out;
+  }
+  function renderLayouts() {
+    var vis = lgVisible(), h = '';
+    vis.forEach(function (i) {
+      var l = LAYOUTS[i];
+      h += '<div class="lg lg-r">' +
+        '<div class="cbx"><input type="checkbox" data-act="lgSel" data-i="' + i + '"' + (l.sel ? ' checked' : '') + ' aria-label="Select ' + esc(l.name) + '"></div>' +
+        '<div><button class="lname" data-act="lgOpen" data-i="' + i + '">' + esc(l.name) + '</button></div>' +
+        '<div>' + esc(l.shared) + '</div>' +
+        '<div><button class="pill' + (l.def ? ' on' : '') + '" data-act="lgDef" data-i="' + i + '" aria-pressed="' + l.def + '" aria-label="Default layout: ' + esc(l.name) + '"><span class="k"></span><span class="l">' + (l.def ? 'Yes' : 'No') + '</span></button></div>' +
+        '<div><button class="pill w' + (l.active ? ' on' : '') + '" data-act="lgStat" data-i="' + i + '" aria-pressed="' + l.active + '" aria-label="Status: ' + esc(l.name) + '"><span class="k"></span><span class="l">' + (l.active ? 'Active' : 'Inactive') + '</span></button></div>' +
+        '</div>';
+    });
+    if (!vis.length) h = '<div class="lg-empty">No layouts match the filters.</div>';
+    document.getElementById('lgRows').innerHTML = h;
+    var all = document.getElementById('lgAll');
+    var selCount = vis.filter(function (i) { return LAYOUTS[i].sel; }).length;
+    all.checked = vis.length > 0 && selCount === vis.length;
+    all.indeterminate = selCount > 0 && selCount < vis.length;
+  }
+  function lgFocus(act, i) { var b = document.querySelector('[data-act="' + act + '"][data-i="' + i + '"]'); if (b) b.focus(); }
+  /* ---------------- Settings home ---------------- */
+  var C = '#1fbdee';
+  var SH_ICON = {
+    company: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="' + C + '" d="M3 22V4l7-2v20zM11 22V8h10v14z"/><g fill="#fff"><rect x="5" y="6" width="1.6" height="1.6"/><rect x="7.4" y="6" width="1.6" height="1.6"/><rect x="5" y="10" width="1.6" height="1.6"/><rect x="7.4" y="10" width="1.6" height="1.6"/><rect x="5" y="14" width="1.6" height="1.6"/><rect x="7.4" y="14" width="1.6" height="1.6"/><rect x="13" y="11" width="1.6" height="1.6"/><rect x="16" y="11" width="1.6" height="1.6"/><rect x="13" y="15" width="1.6" height="1.6"/><rect x="16" y="15" width="1.6" height="1.6"/></g></svg>',
+    system: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="1.5" fill="' + C + '"/><path d="M8 21h8M12 17v4" stroke="' + C + '" stroke-width="2"/><circle cx="12" cy="10" r="3" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M8.5 6.5 10 8" stroke="#fff" stroke-width="1.6"/></svg>',
+    calendar: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="1.5" fill="' + C + '"/><path d="M7 2v4M17 2v4" stroke="' + C + '" stroke-width="2"/><g fill="#fff"><rect x="5.5" y="9" width="2.5" height="2.5"/><rect x="9.5" y="9" width="2.5" height="2.5"/><rect x="13.5" y="9" width="2.5" height="2.5"/><rect x="17" y="9" width="2" height="2.5"/><rect x="5.5" y="13" width="2.5" height="2.5"/><rect x="9.5" y="13" width="2.5" height="2.5"/><rect x="13.5" y="13" width="2.5" height="2.5"/><rect x="5.5" y="17" width="2.5" height="2.5"/><rect x="9.5" y="17" width="2.5" height="2.5"/></g></svg>',
+    status: '<svg width="22" height="20" viewBox="0 0 26 24" aria-hidden="true"><g fill="' + C + '"><rect x="1" y="5" width="13" height="2.4" rx="1"/><rect x="1" y="11" width="10" height="2.4" rx="1"/><rect x="1" y="17" width="16" height="2.4" rx="1"/><circle cx="20" cy="7" r="4.5"/></g></svg>',
+    product: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="5" fill="' + C + '"/><path d="M3.5 9h17v12h-17z" fill="' + C + '" opacity=".75"/><rect x="9" y="11" width="6" height="2" fill="#fff"/></svg>',
+    comm: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="' + C + '" d="M3 3h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-5 4v-4H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><g fill="#fff"><circle cx="8" cy="10" r="1.4"/><circle cx="12" cy="10" r="1.4"/><circle cx="16" cy="10" r="1.4"/></g></svg>',
+    reports: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="' + C + '" d="M4 2h11l5 5v15H4z"/><path d="M15 2v5h5" fill="#9fe2f7"/><g fill="#fff"><rect x="7" y="14" width="2.2" height="5"/><rect x="10.9" y="11" width="2.2" height="8"/><rect x="14.8" y="15.5" width="2.2" height="3.5"/></g></svg>',
+    automation: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><g fill="' + C + '"><rect x="8" y="2" width="8" height="6" rx="1"/><rect x="1.5" y="16" width="8" height="6" rx="1"/><rect x="14.5" y="16" width="8" height="6" rx="1"/></g><path d="M12 8v4M5.5 16v-4h13v4" fill="none" stroke="' + C + '" stroke-width="2"/></svg>',
+    forms: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2h12v6l-6 6v6H4z" fill="' + C + '"/><g fill="#fff"><rect x="6" y="5" width="7" height="1.8"/><rect x="6" y="9" width="5" height="1.8"/><rect x="6" y="13" width="3" height="1.8"/></g><path d="M12 21v-3l8-8 3 3-8 8z" fill="' + C + '"/></svg>',
+    online: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="1.5" fill="' + C + '"/><path d="M8 21h8M12 17v4" stroke="' + C + '" stroke-width="2"/><circle cx="12" cy="10" r="4" fill="none" stroke="#fff" stroke-width="1.5"/><path d="M8 10h8M12 6c-1.5 2.4-1.5 5.6 0 8M12 6c1.5 2.4 1.5 5.6 0 8" fill="none" stroke="#fff" stroke-width="1.2"/></svg>',
+    website: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="1.5" fill="' + C + '"/><path d="M8 21h8M12 17v4" stroke="' + C + '" stroke-width="2"/><circle cx="12" cy="10" r="4" fill="none" stroke="#fff" stroke-width="1.5"/><path d="M8.5 10h7" stroke="#fff" stroke-width="1.2"/></svg>',
+    production: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="' + C + '" d="M2 22V12l5 3v-3l5 3v-3l5 3V3h4v19z"/><g fill="#fff"><rect x="5" y="17" width="2" height="2"/><rect x="10" y="17" width="2" height="2"/><rect x="15" y="17" width="2" height="2"/></g></svg>'
+  };
+  var SETTINGS_CARDS = [
+    { title: 'Company settings', icon: 'company', items: ['Application setup', 'Company profile', 'Financial & Tax setup', 'Country', 'Currency conversion', 'Payment configuration', 'Social media links', 'Terms & Conditions'] },
+    { title: 'System settings', icon: 'system', items: ['Users & Roles', 'Price setup', 'Customer account', 'Standard delivery', 'Express', 'Service charges', 'Restore', 'Log history', 'Import history'] },
+    { title: 'Calendar settings', icon: 'calendar', items: ['Appointment types', 'Calendar setup', 'Calendar integration setup', 'Checklist'] },
+    { title: 'Status', icon: 'status', items: ['Status', 'Manual notes'] },
+    { title: 'Product configuration', icon: 'product', items: ['Field types', 'Options & Materials', 'Pricing groups', 'Pricing types & Unit types', 'Products', 'Suppliers', 'Locations'] },
+    { title: 'Communication', icon: 'comm', items: ['Emails', 'Text message'] },
+    { title: 'Reports Setup', icon: 'reports', items: ['Reports & Templates', 'General reports setup'] },
+    { title: 'Automation', icon: 'automation', items: ['Automation rules'] },
+    { title: 'Customization forms', icon: 'forms', items: ['Field settings', 'Modules'] },
+    { title: 'Online ordering setup', icon: 'online', items: ['Online ordering setup', 'Trade user setup'] },
+    { title: 'Website setup', icon: 'website', items: ['E-commerce products', 'SEO'] },
+    { title: 'Production setup', icon: 'production', items: ['Production configuration', 'Product workflow'] }
+  ];
+  function renderSettingsHome() {
+    var h = '';
+    SETTINGS_CARDS.forEach(function (c) {
+      h += '<section class="sh-card" aria-label="' + esc(c.title) + '"><h2 class="sh-h" style="margin:0">' + SH_ICON[c.icon] + '<span>' + esc(c.title) + '</span></h2><ul class="sh-list">';
+      c.items.forEach(function (it) { h += '<li><button data-act="shItem" data-v="' + esc(it) + '">' + esc(it) + '</button></li>'; });
+      h += '</ul></section>';
+    });
+    document.getElementById('shGrid').innerHTML = h;
+  }
+
+  function showScreen(name) {
+    var jobs = name === 'jobs';
+    document.getElementById('settingsHome').hidden = name !== 'settingsHome';
+    document.getElementById('settingsScreen').hidden = name !== 'modules';
+    document.getElementById('jobsSub').hidden = !jobs;
+    document.getElementById('jobsMain').hidden = !jobs;
+    var nav = document.getElementById('navAllJob');
+    nav.classList.toggle('on', jobs);
+    if (jobs) nav.setAttribute('aria-current', 'page'); else nav.removeAttribute('aria-current');
+    S.editing = null; S.colEdit = null; S.drawer = false;
+    render();
+    if (name === 'settingsHome') renderSettingsHome();
+    if (name === 'modules') renderLayouts();
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------------- Events ---------------- */
+  function setMore(open) {
+    var btn = document.querySelector('.more-btn'), menu = document.getElementById('moreMenu');
+    btn.setAttribute('aria-expanded', String(open));
+    menu.hidden = !open;
+    if (open) menu.querySelector('a').focus();
+  }
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#more')) setMore(false);
+    else if (e.target.closest('.more-menu a')) { e.preventDefault(); setMore(false); }
+    var el = e.target.closest('[data-act]');
+    if (!el) return;
+    var act = el.getAttribute('data-act');
+    var ri = el.hasAttribute('data-ri') ? +el.getAttribute('data-ri') : null;
+    var key = el.getAttribute('data-key');
+    var li = el.hasAttribute('data-i') ? +el.getAttribute('data-i') : null;
+    switch (act) {
+      case 'goJobs': e.preventDefault(); showScreen('jobs'); break;
+      case 'goSettings': showScreen('settingsHome'); break;
+      case 'shItem':
+        var item = el.getAttribute('data-v');
+        if (item === 'Modules') showScreen('modules');
+        else { showToast({ kind: 'info', title: item, sub: 'Not part of this prototype – try Customization forms › Modules' }); renderToast(); }
+        break;
+      case 'sideToggle':
+        var side = document.getElementById('side'), col = !side.classList.contains('collapsed');
+        side.classList.toggle('collapsed', col);
+        el.setAttribute('aria-expanded', String(!col));
+        el.setAttribute('aria-label', col ? 'Expand menu' : 'Collapse menu');
+        document.getElementById('sideIco').setAttribute('d', col ? 'm13 6 6 6-6 6M5 6l6 6-6 6' : 'm11 6-6 6 6 6M19 6l-6 6 6 6');
+        break;
+      case 'sideItem':
+        e.preventDefault();
+        document.querySelectorAll('#sideList li').forEach(function (n) {
+          var on = n.contains(el);
+          n.classList.toggle('on', on);
+          var a = n.querySelector('a');
+          if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+          a.querySelectorAll('svg').forEach(function (s) { s.setAttribute('stroke', on ? '#fff' : '#c9ccd6'); });
+        });
+        break;
+      case 'lgDef':
+        var L = LAYOUTS[li];
+        if (L.def) { showToast({ kind: 'info', title: 'A default layout is required', sub: 'Set another layout as default to change this' }); renderToast(); break; }
+        if (!L.active) { showToast({ kind: 'info', title: 'Layout is inactive', sub: 'Activate “' + L.name + '” before making it the default' }); renderToast(); break; }
+        LAYOUTS.forEach(function (x) { x.def = false; }); L.def = true;
+        renderLayouts(); lgFocus('lgDef', li);
+        showToast({ kind: 'info', title: 'Default layout updated', sub: '“' + L.name + '” is now the default' }); renderToast();
+        break;
+      case 'lgStat':
+        var L2 = LAYOUTS[li];
+        if (L2.active && L2.def) { showToast({ kind: 'info', title: 'Can’t deactivate the default layout', sub: 'Set another layout as default first' }); renderToast(); break; }
+        L2.active = !L2.active;
+        renderLayouts(); lgFocus('lgStat', li);
+        showToast({ kind: 'info', title: 'Layout ' + (L2.active ? 'activated' : 'deactivated'), sub: '“' + L2.name + '”' }); renderToast();
+        break;
+      case 'lgOpen':
+        showToast({ kind: 'info', title: 'Opens layout: ' + LAYOUTS[li].name, sub: 'Layout editor (not part of this prototype yet)' }); renderToast();
+        break;
+      case 'newLayout':
+        showToast({ kind: 'info', title: 'New Layout', sub: 'Opens the layout editor (not part of this prototype yet)' }); renderToast();
+        break;
+      case 'colEdit':
+        if (S.colEdit === key) exitCol(); else enterCol(key);
+        break;
+      case 'more':
+        setMore(document.getElementById('moreMenu').hidden); break;
+      case 'edit':
+        if (S.editing && !(S.editing.ri === ri && S.editing.key === key)) { if (!commitDraft()) return; }
+        start(ri, key); break;
+      case 'pick':
+        var ed = S.editing; if (!ed) return;
+        var v = el.getAttribute('data-v');
+        if (v !== S.rows[ed.ri][ed.key]) setVal(ed.ri, ed.key, v);
+        S.editing = null; render();
+        if (S.colEdit === ed.key) { var fb = document.querySelector('.ec.field[data-ri="' + ed.ri + '"][data-key="' + ed.key + '"]'); if (fb) fb.focus(); }
+        break;
+      case 'cancel': cancel(); break;
+      case 'link':
+        e.preventDefault();
+        showToast({ kind: 'info', title: 'Redirects into the job', sub: 'Current behaviour: clicking ' + FMAP[key].label + ' opens the job instead of editing it' });
+        renderToast(); break;
+      case 'undo': undo(); break;
+      case 'mode': S.mode = el.getAttribute('data-v'); S.editing = null; S.colEdit = null; render(); break;
+      case 'drawer': S.drawer = true; S.draftCfg = clone(S.cfg); S.editing = null; render(); break;
+      case 'closeDrawer': S.drawer = false; S.draftCfg = null; render(); break;
+      case 'dedit':
+        if (!S.draftCfg[key].show) return;
+        S.draftCfg[key].edit = !S.draftCfg[key].edit; renderLayer();
+        var b = document.querySelector('[data-act="dedit"][data-key="' + key + '"]'); if (b) b.focus();
+        break;
+      case 'saveDrawer':
+        S.cfg = S.draftCfg; S.draftCfg = null; S.drawer = false; S.colEdit = null;
+        var n = FIELDS.filter(function (f) { return f.can && S.cfg[f.key].show && S.cfg[f.key].edit; }).length;
+        showToast({ kind: 'info', title: 'Default View updated', sub: n + ' columns editable from All Job' });
+        render(); break;
+    }
+  });
+
+  document.addEventListener('change', function (e) {
+    var el = e.target, act = el.getAttribute('data-act');
+    if (act === 'lgSel') { LAYOUTS[+el.getAttribute('data-i')].sel = el.checked; renderLayouts(); return; }
+    if (act === 'lgAll') { var on = el.checked; lgVisible().forEach(function (i) { LAYOUTS[i].sel = on; }); renderLayouts(); return; }
+    if (el.hasAttribute('data-lgf') && el.tagName === 'SELECT') { LF[el.getAttribute('data-lgf')] = el.value; renderLayouts(); return; }
+    if (act === 'check') {
+      var ri = +el.getAttribute('data-ri'), key = el.getAttribute('data-key');
+      if (S.editing && !commitDraft()) { el.checked = !el.checked; return; }
+      S.editing = null;
+      setVal(ri, key, el.checked);
+      render();
+    } else if (el.hasAttribute('data-colin') && el.type === 'date') {
+      colCommit(el);
+    } else if (act === 'dshow') {
+      var k = el.getAttribute('data-key');
+      S.draftCfg[k].show = el.checked;
+      renderLayer();
+      var c = document.querySelector('[data-act="dshow"][data-key="' + k + '"]'); if (c) c.focus();
+    }
+  });
+
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (el.hasAttribute('data-lgf') && el.tagName === 'INPUT') { LF[el.getAttribute('data-lgf')] = el.value; renderLayouts(); return; }
+    if (el.id === 'cellInput') {
+      S.draft = el.value;
+      if (el.type === 'text') {
+        var bad = el.value.length > MAX_TEXT, err = document.getElementById('cellErr');
+        el.classList.toggle('bad', bad);
+        if (err) { err.hidden = !bad; err.textContent = 'Max ' + MAX_TEXT + ' characters (' + el.value.length + ')'; }
+      }
+    } else if (el.hasAttribute('data-colin') && el.type === 'text') {
+      var bad = el.value.length > MAX_TEXT, er = el.parentNode.querySelector('.err');
+      el.classList.toggle('bad', bad);
+      el.classList.remove('saved');
+      if (er) { er.hidden = !bad; er.textContent = 'Max ' + MAX_TEXT + ' characters (' + el.value.length + ')'; }
+    } else if (el.id === 'q') {
+      S.q = el.value; S.editing = null; render();
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var inCell = e.target.id === 'cellInput';
+    var inMenu = !!e.target.closest('.menu');
+    var inCol = e.target.hasAttribute && e.target.hasAttribute('data-colin');
+    if (inCol) {
+      if (e.key === 'Enter') { e.preventDefault(); colStep(e.target, e.shiftKey ? -1 : 1); }
+      else if (e.key === 'Escape') {
+        e.preventDefault();
+        var s0 = S.rows[+e.target.getAttribute('data-ri')][e.target.getAttribute('data-key')];
+        e.target.value = s0 == null ? '' : s0;
+        exitCol();
+      }
+      return;
+    }
+    if (inCell) {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+      else if (e.key === 'Tab') { e.preventDefault(); move(e.shiftKey ? -1 : 1); }
+    } else if (inMenu) {
+      var btns = Array.prototype.slice.call(document.querySelectorAll('.menu button'));
+      var i = btns.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown') { e.preventDefault(); btns[Math.min(i + 1, btns.length - 1)].focus(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); btns[Math.max(i - 1, 0)].focus(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+      else if (e.key === 'Tab') { e.preventDefault(); move(e.shiftKey ? -1 : 1); }
+    } else if (e.key === 'Escape' && S.colEdit && !S.editing && !S.drawer) { exitCol(); }
+    else if (e.key === 'Escape' && !document.getElementById('moreMenu').hidden) { setMore(false); document.querySelector('.more-btn').focus(); }
+    else if (e.key === 'Escape' && S.drawer) { S.drawer = false; S.draftCfg = null; render(); }
+  });
+
+  document.addEventListener('focusout', function (e) {
+    if (rendering) return;
+    if (e.target.hasAttribute && e.target.hasAttribute('data-colin') && e.target.type === 'text') { colCommit(e.target); return; }
+    if (e.target.id !== 'cellInput') return;
+    // let a click on another cell / Tab handler run first
+    setTimeout(function () {
+      if (!S.editing || document.activeElement && document.activeElement.id === 'cellInput') return;
+      var f = FMAP[S.editing.key];
+      if (f.type === 'text' || f.type === 'date') commit();
+    }, 0);
+  });
+
+  document.getElementById('gwrap').addEventListener('scroll', function () {
+    if (S.editing && (FMAP[S.editing.key].type === 'select' || FMAP[S.editing.key].type === 'status')) cancel();
+  });
+  window.addEventListener('resize', function () { if (S.editing) renderLayer(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
